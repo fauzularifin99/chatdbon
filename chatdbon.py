@@ -673,8 +673,20 @@ elif st.session_state.halaman == 3:
         webrtc_streamer(
             key="danger-detection",
             video_processor_factory=DangerDetector,
-            media_stream_constraints={"video": True, "audio": False},
-        )
+            media_stream_constraints={
+                "video": {
+                    "width": 320,
+                    "height": 240,
+                    "frameRate": 10
+                },
+                "audio": False
+    },
+    rtc_configuration={
+        "iceServers": [
+            {"urls": ["stun:stun.l.google.com:19302"]}
+        ]
+    },
+)
 
     with kolom_chat:
         st.markdown('<div class="section-label">RIWAYAT CHAT</div>', unsafe_allow_html=True)
