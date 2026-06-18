@@ -31,33 +31,52 @@ ALERT_HOLD_FRAMES = 10
 DANGEROUS_CLASSES = ["pisau", "gunting", "cutter"]
 SAFE_CLASS = "safe"
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def load_model():
-   from ultralytics import YOLO
-   return YOLO(MODEL_PATH)
+    try:
+        from ultralytics import YOLO
+        return YOLO(MODEL_PATH)
+    except Exception as e:
+        return None
 
 class DangerDetector:
     def __init__(self):
         self.alert_counter = 0
-        self.model = load_model()
+        self.frame_count = 0
+        self.last_danger_detected = False
+        self.model = None
 
     def recv(self, frame):
         import av
-        import cv2
 
         img = frame.to_ndarray(format="bgr24")
 
-        results = self.model(img, conf=CONF_THRESHOLD, imgsz=640, verbose=False)[0]
+        if self.model is None:
+            self.model = load_model()
 
-        danger_detected = False
+        if self.model is None:
+            return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-        for box in results.boxes:
-            cls_id = int(box.cls[0])
-            label = self.model.names[cls_id]
+        import cv2
 
-            if label in DANGEROUS_CLASSES:
-                danger_detected = True
-                break
+        self.frame_count += 1
+
+        if self.frame_count % 5 == 0:
+            results = self.model(img, conf=CONF_THRESHOLD, imgsz=320, verbose=False)[0]
+
+            danger_detected = False
+
+            for box in results.boxes:
+                cls_id = int(box.cls[0])
+                label = self.model.names[cls_id]
+
+                if label in DANGEROUS_CLASSES:
+                    danger_detected = True
+                    break
+
+            self.last_danger_detected = danger_detected
+
+        danger_detected = self.last_danger_detected
 
         if danger_detected:
             self.alert_counter = ALERT_HOLD_FRAMES
@@ -65,13 +84,13 @@ class DangerDetector:
             self.alert_counter = max(0, self.alert_counter - 1)
 
         if self.alert_counter > 0:
-            cv2.rectangle(img, (0, img.shape[0] - 80), (img.shape[1], img.shape[0]), (0, 0, 255), -1)
-            cv2.putText(img, "ALERT BAHAYA", (30, img.shape[0] - 25),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.4, (255, 255, 255), 4)
+            cv2.rectangle(img, (0, img.shape[0] - 30), (img.shape[1], img.shape[0]), (0, 0, 255), -1)
+            cv2.putText(img, "ALERT BAHAYA", (20, img.shape[0] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         else:
-            cv2.rectangle(img, (0, img.shape[0] - 80), (img.shape[1], img.shape[0]), (0, 180, 0), -1)
-            cv2.putText(img, "AMAN", (30, img.shape[0] - 25),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.4, (255, 255, 255), 4)
+            cv2.rectangle(img, (0, img.shape[0] - 30), (img.shape[1], img.shape[0]), (0, 180, 0), -1)
+            cv2.putText(img, "AMAN", (20, img.shape[0] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
