@@ -38,11 +38,10 @@ def load_model():
         model = YOLO(MODEL_PATH)
         print("YOLO SUCCESS")
         return model
-
     except Exception as e:
         print("YOLO ERROR =", e)
-        raise e
-
+        return None
+        
 class DangerDetector:
     def __init__(self):
         self.alert_counter = 0
