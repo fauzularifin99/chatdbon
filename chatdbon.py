@@ -31,41 +31,28 @@ ALERT_HOLD_FRAMES = 10
 DANGEROUS_CLASSES = ["pisau", "gunting", "cutter"]
 SAFE_CLASS = "safe"
 
-@st.cache_resource(show_spinner=False)
+@st.cache_resource
 def load_model():
-    try:
-        from ultralytics import YOLO
-        model = YOLO(MODEL_PATH)
-        print("YOLO SUCCESS")
-        return model
-    except Exception as e:
-        print("YOLO ERROR =", e)
-        return None
-        
+   from ultralytics import YOLO
+   return YOLO(MODEL_PATH)
+
 class DangerDetector:
     def __init__(self):
         self.alert_counter = 0
         self.frame_count = 0
         self.last_danger_detected = False
-        self.model = None
+        self.model = load_model()
 
     def recv(self, frame):
         import av
+        import cv2
 
         img = frame.to_ndarray(format="bgr24")
-
-        if self.model is None:
-            self.model = load_model()
-
-        if self.model is None:
-            return av.VideoFrame.from_ndarray(img, format="bgr24")
-
-        import cv2
 
         self.frame_count += 1
 
         if self.frame_count % 5 == 0:
-            results = self.model(img, conf=CONF_THRESHOLD, imgsz=320, verbose=False)[0]
+            results = self.model(img, conf=CONF_THRESHOLD, imgsz=640, verbose=False)[0]
 
             danger_detected = False
 
@@ -85,15 +72,14 @@ class DangerDetector:
             self.alert_counter = ALERT_HOLD_FRAMES
         else:
             self.alert_counter = max(0, self.alert_counter - 1)
-
         if self.alert_counter > 0:
-            cv2.rectangle(img, (0, img.shape[0] - 30), (img.shape[1], img.shape[0]), (0, 0, 255), -1)
-            cv2.putText(img, "ALERT BAHAYA", (20, img.shape[0] - 8),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            cv2.rectangle(img, (0, img.shape[0] - 40), (img.shape[1], img.shape[0]), (0, 0, 255), -1)
+            cv2.putText(img, "ALERT BAHAYA", (20, img.shape[0] - 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         else:
-            cv2.rectangle(img, (0, img.shape[0] - 30), (img.shape[1], img.shape[0]), (0, 180, 0), -1)
-            cv2.putText(img, "AMAN", (20, img.shape[0] - 8),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            cv2.rectangle(img, (0, img.shape[0] - 40), (img.shape[1], img.shape[0]), (0, 180, 0), -1)
+            cv2.putText(img, "AMAN", (20, img.shape[0] - 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
@@ -680,13 +666,8 @@ elif st.session_state.halaman == 3:
                     "frameRate": 10
                 },
                 "audio": False
-    },
-    rtc_configuration={
-        "iceServers": [
-            {"urls": ["stun:stun.l.google.com:19302"]}
-        ]
-    },
-)
+            },
+        )
 
     with kolom_chat:
         st.markdown('<div class="section-label">RIWAYAT CHAT</div>', unsafe_allow_html=True)
@@ -815,4 +796,3 @@ elif st.session_state.halaman == 4:
         for k in list(st.session_state.keys()):
             del st.session_state[k]
         st.rerun()
-
