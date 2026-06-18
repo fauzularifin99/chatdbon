@@ -35,9 +35,13 @@ SAFE_CLASS = "safe"
 def load_model():
     try:
         from ultralytics import YOLO
-        return YOLO(MODEL_PATH)
+        model = YOLO(MODEL_PATH)
+        print("YOLO SUCCESS")
+        return model
+
     except Exception as e:
-        return None
+        print("YOLO ERROR =", e)
+        raise e
 
 class DangerDetector:
     def __init__(self):
