@@ -1,0 +1,12 @@
+streamlit
+openai
+supabase
+yagmail
+twilio
+requests
+beautifulsoup4
+pypdf
+ultralytics
+opencv-python-headless
+streamlit-webrtc
+av
